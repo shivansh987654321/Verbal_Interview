@@ -1,0 +1,103 @@
+# ============================
+#  Secrets / Environment
+# ============================
+.env
+.env.local
+.env.*.local
+*.env
+application-local.properties
+application-secret.properties
+backend/src/main/resources/application.properties
+
+# ============================
+#  OS
+# ============================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============================
+#  IDE / Editors
+# ============================
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.project
+.classpath
+.settings/
+.factorypath
+*.swp
+*.swo
+*~
+
+# ============================
+#  Frontend (React / Node)
+# ============================
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/coverage/
+frontend/.eslintcache
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.pnpm-debug.log*
+frontend/.cache/
+frontend/.parcel-cache/
+
+# ============================
+#  Backend (Spring Boot / Maven)
+# ============================
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/HELP.md
+backend/dependency-reduced-pom.xml
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+
+# Gradle (if ever used)
+backend/.gradle/
+backend/build/
+backend/gradle-app.setting
+backend/!gradle-wrapper.jar
+
+# ============================
+#  Database
+# ============================
+*.sqlite
+*.sqlite3
+*.db
+database/dump/
+database/backups/
+
+# ============================
+#  Logs
+# ============================
+logs/
+*.log
+log/
+
+# ============================
+#  Misc
+# ============================
+.history/
+.tmp/
+tmp/
+temp/
+*.bak
+*.orig

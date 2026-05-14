@@ -1,0 +1,29 @@
+# Server
+server.port=8080
+
+# Database
+spring.datasource.url=jdbc:mysql://localhost:3306/verbal_interview?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+spring.datasource.username=root
+spring.datasource.password=YOUR_MYSQL_PASSWORD
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JPA/Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+spring.jpa.properties.hibernate.format_sql=true
+
+# Groq API (get from https://console.groq.com)
+groq.api.key=YOUR_GROQ_API_KEY
+groq.api.url=https://api.groq.com/openai/v1/chat/completions
+groq.model=llama-3.3-70b-versatile
+
+# Clerk (get JWKS URL from https://dashboard.clerk.com)
+clerk.jwks.url=https://YOUR_CLERK_INSTANCE.clerk.accounts.dev/.well-known/jwks.json
+
+# CORS
+cors.allowed.origins=http://localhost:3000
+
+# Logging
+logging.level.com.interview=DEBUG
+logging.level.org.springframework.security=WARN
