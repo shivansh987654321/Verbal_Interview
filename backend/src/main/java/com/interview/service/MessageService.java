@@ -1,5 +1,7 @@
 package com.interview.service;
 
+import com.interview.client.CodingPlatformClient;
+import com.interview.dto.CandidatePerformance;
 import com.interview.dto.MessageDto;
 import com.interview.dto.SendMessageRequest;
 import com.interview.dto.SendMessageResponse;
@@ -19,9 +21,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MessageService {
 
+    private static final String TERMINATION_MESSAGE =
+            "This interview has been terminated due to inappropriate conduct.";
+
     private final MessageRepository messageRepository;
     private final InterviewRepository interviewRepository;
     private final GroqService groqService;
+    private final ModerationService moderationService;
+    private final CodingPlatformClient codingPlatformClient;
 
     @Transactional
     public SendMessageResponse processUserMessage(SendMessageRequest req) {
@@ -32,7 +39,38 @@ public class MessageService {
             throw new RuntimeException("Interview is not active");
         }
 
-        // Save user message
+        // ---- MODERATION CHECK (before saving or calling AI) ----
+        ModerationService.ModerationResult check = moderationService.check(req.getMessage());
+        if (check.isFlagged()) {
+            // Persist the offending message for audit
+            Message offending = Message.builder()
+                    .interview(interview)
+                    .sender(Message.SenderType.USER)
+                    .content(req.getMessage())
+                    .timestamp(LocalDateTime.now())
+                    .build();
+            messageRepository.save(offending);
+
+            // Persist a terminating AI message so the transcript is complete
+            Message terminationMsg = Message.builder()
+                    .interview(interview)
+                    .sender(Message.SenderType.AI)
+                    .content(TERMINATION_MESSAGE)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+            messageRepository.save(terminationMsg);
+
+            // Update interview record
+            interview.setStatus(Interview.InterviewStatus.TERMINATED);
+            interview.setTerminationReason(check.getReason());
+            interview.setTerminatedAt(LocalDateTime.now());
+            interview.setEndTime(LocalDateTime.now());
+            interviewRepository.save(interview);
+
+            return SendMessageResponse.terminated(TERMINATION_MESSAGE, check.getReason());
+        }
+
+        // ---- NORMAL FLOW ----
         Message userMessage = Message.builder()
                 .interview(interview)
                 .sender(Message.SenderType.USER)
@@ -41,13 +79,17 @@ public class MessageService {
                 .build();
         messageRepository.save(userMessage);
 
-        // Fetch conversation history (for AI context)
         List<Message> history = messageRepository.findByInterviewOrderByTimestampAsc(interview);
 
-        // Generate AI response with full context
-        String aiText = groqService.generateResponse(interview.getRole(), history);
+        String candidateName = interview.getUser() != null ? interview.getUser().getName() : null;
+        String clerkId = interview.getUser() != null ? interview.getUser().getClerkId() : null;
 
-        // Save AI response
+        // Re-fetch performance on every turn so the AI sees up-to-date data
+        // if the candidate solves problems mid-interview (cheap call, graceful-fails)
+        CandidatePerformance performance = codingPlatformClient.getPerformance(clerkId);
+
+        String aiText = groqService.generateResponse(interview.getRole(), candidateName, performance, history);
+
         Message aiMessage = Message.builder()
                 .interview(interview)
                 .sender(Message.SenderType.AI)
@@ -56,7 +98,7 @@ public class MessageService {
                 .build();
         messageRepository.save(aiMessage);
 
-        return new SendMessageResponse(aiText);
+        return SendMessageResponse.ok(aiText);
     }
 
     public List<MessageDto> getMessagesByInterview(Long interviewId) {

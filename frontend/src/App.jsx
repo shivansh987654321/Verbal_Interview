@@ -5,6 +5,9 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import InterviewPage from './pages/InterviewPage';
 import HistoryPage from './pages/HistoryPage';
+import Problems from './pages/coding/Problems';
+import ProblemDetails from './pages/coding/ProblemDetails';
+import Submissions from './pages/coding/Submissions';
 
 function ProtectedRoute({ children }) {
   const { isSignedIn, isLoaded } = useAuth();
@@ -47,6 +50,24 @@ export default function App() {
             <HistoryPage />
           </ProtectedRoute>
         } />
+
+        {/* Coding Assessment routes (talks to backend on :8081 via codingApi) */}
+        <Route path="/coding" element={
+          <ProtectedRoute>
+            <Problems />
+          </ProtectedRoute>
+        } />
+        <Route path="/coding/problem/:id" element={
+          <ProtectedRoute>
+            <ProblemDetails />
+          </ProtectedRoute>
+        } />
+        <Route path="/coding/submissions" element={
+          <ProtectedRoute>
+            <Submissions />
+          </ProtectedRoute>
+        } />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

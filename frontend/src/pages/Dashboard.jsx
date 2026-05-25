@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserButton, useUser, useAuth } from '@clerk/clerk-react';
 import CategoryCard from '../components/dashboard/CategoryCard';
 import { syncUser, getUserInterviews, setAuthToken } from '../services/api';
+import { codingSyncUser, fetchCodingPerformance } from '../services/codingApi';
 
 const categories = [
   {
@@ -47,7 +48,7 @@ export default function Dashboard() {
   const { user } = useUser();
   const { getToken } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ count: 0, hours: 0 });
+  const [stats, setStats] = useState({ count: 0, hours: 0, problemsSolved: 0 });
 
   useEffect(() => {
     const init = async () => {
@@ -55,15 +56,28 @@ export default function Dashboard() {
         const token = await getToken();
         setAuthToken(token);
 
-        await syncUser({
-          clerkId: user.id,
-          email: user.primaryEmailAddress?.emailAddress,
-          name: user.fullName,
-          profileImageUrl: user.imageUrl,
-        });
+        // Sync user with BOTH backends — they each own their own users table
+        await Promise.all([
+          syncUser({
+            clerkId: user.id,
+            email: user.primaryEmailAddress?.emailAddress,
+            name: user.fullName,
+            profileImageUrl: user.imageUrl,
+          }),
+          codingSyncUser({
+            clerkUserId: user.id,
+            name: user.fullName || user.username || 'Candidate',
+            email: user.primaryEmailAddress?.emailAddress || '',
+          }).catch((e) => console.warn('Coding user sync skipped:', e.message)),
+        ]);
 
-        const res = await getUserInterviews(user.id);
-        const interviews = res.data || [];
+        const [interviewsRes, perfRes] = await Promise.all([
+          getUserInterviews(user.id),
+          fetchCodingPerformance(user.id).catch(() => ({ data: { uniqueSolved: 0 } })),
+        ]);
+
+        const interviews = interviewsRes.data || [];
+        const perf = perfRes.data || {};
 
         const totalMinutes = interviews.reduce((sum, iv) => {
           if (!iv.endTime) return sum;
@@ -74,6 +88,7 @@ export default function Dashboard() {
         setStats({
           count: interviews.length,
           hours: (totalMinutes / 60).toFixed(1),
+          problemsSolved: perf.uniqueSolved || 0,
         });
       } catch (err) {
         console.error('Dashboard init failed:', err);
@@ -121,10 +136,11 @@ export default function Dashboard() {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
           {[
             { label: 'Interviews Taken', value: stats.count, icon: '🎯' },
             { label: 'Hours Practiced', value: stats.hours, icon: '⏱️' },
+            { label: 'Problems Solved', value: stats.problemsSolved, icon: '🧩' },
             { label: 'Topics Covered', value: '6', icon: '📚' },
           ].map((s) => (
             <div key={s.label} className="glass-card p-4 flex items-center gap-3">
@@ -137,7 +153,51 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Categories */}
+        {/* Coding Assessment shortcut */}
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold text-white mb-1">Coding Assessment</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Solve DSA problems — your performance is used to personalize the AI interviewer.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              onClick={() => navigate('/coding')}
+              className="glass-card p-5 text-left transition hover:border-accent-primary/40 hover:shadow-lg hover:shadow-accent-primary/10"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-2xl mb-2">🧩</p>
+                  <h3 className="text-lg font-semibold text-white">Browse Problems</h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Solve coding problems in Java, C++, or Python.
+                  </p>
+                </div>
+                <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+            <button
+              onClick={() => navigate('/coding/submissions')}
+              className="glass-card p-5 text-left transition hover:border-accent-primary/40 hover:shadow-lg hover:shadow-accent-primary/10"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-2xl mb-2">📋</p>
+                  <h3 className="text-lg font-semibold text-white">My Submissions</h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Review your coding submissions and runtimes.
+                  </p>
+                </div>
+                <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Interview Tracks */}
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-white mb-1">Interview Tracks</h2>
           <p className="text-sm text-gray-500">Select a track to begin a mock interview session.</p>

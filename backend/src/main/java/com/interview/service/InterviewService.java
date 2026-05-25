@@ -1,5 +1,7 @@
 package com.interview.service;
 
+import com.interview.client.CodingPlatformClient;
+import com.interview.dto.CandidatePerformance;
 import com.interview.dto.InterviewDto;
 import com.interview.dto.StartInterviewRequest;
 import com.interview.dto.StartInterviewResponse;
@@ -25,6 +27,7 @@ public class InterviewService {
     private final MessageRepository messageRepository;
     private final UserService userService;
     private final GroqService groqService;
+    private final CodingPlatformClient codingPlatformClient;
 
     @Transactional
     public StartInterviewResponse startInterview(StartInterviewRequest req) {
@@ -37,8 +40,12 @@ public class InterviewService {
                 .build();
         interview = interviewRepository.save(interview);
 
-        // Generate opening message from AI
-        String opening = groqService.generateResponse(req.getRole(), new ArrayList<>());
+        // Fetch coding performance from sibling service (graceful-fails to empty)
+        CandidatePerformance performance = codingPlatformClient.getPerformance(user.getClerkId());
+
+        // Generate opening message from AI, personalized with coding performance
+        String opening = groqService.generateResponse(
+                req.getRole(), user.getName(), performance, new ArrayList<>());
 
         Message firstMessage = Message.builder()
                 .interview(interview)

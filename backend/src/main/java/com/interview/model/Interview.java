@@ -34,6 +34,12 @@ public class Interview {
     @Column(nullable = false)
     private InterviewStatus status;
 
+    @Column(name = "termination_reason", length = 255)
+    private String terminationReason;
+
+    @Column(name = "terminated_at")
+    private LocalDateTime terminatedAt;
+
     @OneToMany(mappedBy = "interview", cascade = CascadeType.ALL, fetch = FetchType.LAZY,
                orphanRemoval = true)
     @OrderBy("timestamp ASC")
@@ -46,6 +52,6 @@ public class Interview {
     }
 
     public enum InterviewStatus {
-        ACTIVE, COMPLETED, ABANDONED
+        ACTIVE, COMPLETED, ABANDONED, TERMINATED
     }
 }

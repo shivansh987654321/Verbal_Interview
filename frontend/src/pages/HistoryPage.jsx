@@ -142,6 +142,7 @@ export default function HistoryPage() {
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                         iv.status === 'COMPLETED' ? 'bg-green-500/10 text-green-400' :
                         iv.status === 'ACTIVE' ? 'bg-yellow-500/10 text-yellow-400' :
+                        iv.status === 'TERMINATED' ? 'bg-red-500/10 text-red-400' :
                         'bg-gray-500/10 text-gray-400'
                       }`}>
                         {iv.status}

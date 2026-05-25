@@ -13,6 +13,8 @@ export function InterviewProvider({ children }) {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [interviewActive, setInterviewActive] = useState(false);
+  const [terminated, setTerminated] = useState(false);
+  const [terminationReason, setTerminationReason] = useState(null);
 
   const getAuthHeaders = useCallback(async () => {
     const token = await getToken();
@@ -47,7 +49,7 @@ export function InterviewProvider({ children }) {
   }, [getAuthHeaders, initUser, user]);
 
   const submitAnswer = useCallback(async (userText) => {
-    if (!interviewId || !userText.trim()) return;
+    if (!interviewId || !userText.trim() || terminated) return;
 
     const userMsg = { sender: 'USER', content: userText, timestamp: new Date().toISOString() };
     setMessages((prev) => [...prev, userMsg]);
@@ -56,14 +58,28 @@ export function InterviewProvider({ children }) {
     try {
       await getAuthHeaders();
       const res = await sendMessage({ interviewId, message: userText });
-      const { aiResponse } = res.data;
-      const aiMsg = { sender: 'AI', content: aiResponse, timestamp: new Date().toISOString() };
+      const data = res.data;
+
+      const aiMsg = {
+        sender: 'AI',
+        content: data.aiResponse,
+        timestamp: new Date().toISOString(),
+      };
       setMessages((prev) => [...prev, aiMsg]);
-      speakText(aiResponse);
+
+      if (data.terminated) {
+        cancelSpeech();
+        speakText(data.aiResponse);
+        setTerminated(true);
+        setTerminationReason(data.terminationReason || 'Inappropriate conduct');
+        setInterviewActive(false);
+      } else {
+        speakText(data.aiResponse);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [interviewId, getAuthHeaders]);
+  }, [interviewId, terminated, getAuthHeaders]);
 
   const finishInterview = useCallback(async () => {
     if (!interviewId) return;
@@ -84,6 +100,8 @@ export function InterviewProvider({ children }) {
       messages,
       isLoading,
       interviewActive,
+      terminated,
+      terminationReason,
       beginInterview,
       submitAnswer,
       finishInterview,
